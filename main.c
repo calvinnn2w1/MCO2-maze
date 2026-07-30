@@ -1,15 +1,46 @@
-#include <stdio.h>
+/*
+ * main.c
+ *
+ * Entry point for the Rat in a Maze Simulator.
+ * Provides a menu-driven TUI for loading mazes and running the
+ * DFS pathfinding simulation.
+ *
+ * Included headers (and why):
+ *   <stdio.h>  - printf/scanf/getchar/fgets for user I/O.
+ *   <string.h> - strlen() for stripping newlines from filename input.
+ *   "maze.h"   - Maze type and display functions.
+ *   "stack.h"  - Stack type (included transitively, but explicit for clarity).
+ *   "solver.h" - SolverResult type, solveMaze(), displayMetrics().
+ *
+ * Coding restrictions enforced:
+ *   - No global variables (all state is local to main or passed as params).
+ *   - break only inside switch statements.
+ *   - return only in non-void functions, only at the natural end.
+ *   - No continue, exit(), goto, or calling main().
+ */
 
+#include <stdio.h>
+#include <string.h>
+#include "maze.h"
+#include "stack.h"
+#include "solver.h"
+
+/* ===== Function Declarations ===== */
 void clearScreen(void);
 void displayHeader(void);
-void displayMainMenu(int mazeLoaded);
+void displayMainMenu(int mazeLoaded, Maze *maze);
+int  readMenuChoice(void);
 void waitForEnter(void);
-int readMenuChoice(void);
-void loadMazePlaceholder(int *mazeLoaded);
-void startSimulationPlaceholder(int mazeLoaded);
+void handleLoadMaze(Maze *maze, int *mazeLoaded);
+void handleStartSimulation(Maze *maze, int mazeLoaded);
 
+/*
+ * main - Program entry point.
+ * Runs a menu loop until the user selects Exit (option 3).
+ */
 int main(void)
 {
+    Maze maze;
     int menuChoice;
     int programRunning;
     int mazeLoaded;
@@ -22,17 +53,17 @@ int main(void)
     {
         clearScreen();
         displayHeader();
-        displayMainMenu(mazeLoaded);
+        displayMainMenu(mazeLoaded, &maze);
         menuChoice = readMenuChoice();
 
         switch (menuChoice)
         {
             case 1:
-                loadMazePlaceholder(&mazeLoaded);
+                handleLoadMaze(&maze, &mazeLoaded);
                 break;
 
             case 2:
-                startSimulationPlaceholder(mazeLoaded);
+                handleStartSimulation(&maze, mazeLoaded);
                 break;
 
             case 3:
@@ -40,67 +71,91 @@ int main(void)
                 break;
 
             default:
-                printf("\nInvalid choice. Please enter 1, 2, or 3.\n");
+                printf("\n  " ANSI_RED "Invalid choice. Please enter 1, 2, "
+                       "or 3." ANSI_RESET "\n");
                 waitForEnter();
+                break;
         }
     }
 
     clearScreen();
-    printf("==========================================\n");
-    printf("           RAT MAZE SIMULATOR             \n");
-    printf("==========================================\n");
-    printf("\nThank you for using the program!\n\n");
+    displayHeader();
+    printf("  Thank you for using Rat Maze Simulator!\n\n");
 
     return 0;
 }
 
+/* ===== UI Functions ===== */
+
+/*
+ * clearScreen - Clears the terminal using ANSI escape codes.
+ * \033[2J clears the screen, \033[H moves cursor to top-left.
+ * Works in modern Windows Terminal, VS Code terminal, and most Unix terminals.
+ */
 void clearScreen(void)
 {
     printf("\033[2J\033[H");
 }
 
+/*
+ * displayHeader - Prints the application banner.
+ */
 void displayHeader(void)
 {
-    printf("==========================================\n");
-    printf("           RAT MAZE SIMULATOR             \n");
-    printf("==========================================\n");
-    printf(" Help the rat find its way to the cheese!\n");
-    printf("==========================================\n\n");
+    printf(ANSI_CYAN ANSI_BOLD);
+    printf("  ==========================================\n");
+    printf("        RAT IN A MAZE SIMULATOR             \n");
+    printf("  ==========================================\n");
+    printf(ANSI_RESET);
+    printf("  Help the rat find its way to the cheese!\n");
+    printf("  ==========================================\n\n");
 }
 
-void displayMainMenu(int mazeLoaded)
+/*
+ * displayMainMenu - Shows the main menu options and current status.
+ * If a maze is loaded, also displays its dimensions.
+ */
+void displayMainMenu(int mazeLoaded, Maze *maze)
 {
-    printf("MAIN MENU\n\n");
-    printf("  [1] Load Maze\n");
-    printf("  [2] Start Simulation\n");
-    printf("  [3] Exit\n\n");
+    printf("  MAIN MENU\n\n");
+    printf("    [1] Load Maze\n");
+    printf("    [2] Start Simulation\n");
+    printf("    [3] Exit\n\n");
 
     if (mazeLoaded == 1)
     {
-        printf("Status: Maze loaded and ready.\n");
+        printf("  Status: " ANSI_GREEN "Maze loaded (%d x %d)" ANSI_RESET "\n",
+               maze->rows, maze->cols);
     }
     else
     {
-        printf("Status: No maze loaded.\n");
+        printf("  Status: " ANSI_YELLOW "No maze loaded." ANSI_RESET "\n");
     }
 
-    printf("\n==========================================\n");
+    printf("\n  ==========================================\n");
 }
 
+/*
+ * readMenuChoice - Reads an integer choice from stdin.
+ * Clears the input buffer after reading to prevent leftover
+ * characters from affecting subsequent reads.
+ * Returns the integer entered, or 0 if input was invalid.
+ */
 int readMenuChoice(void)
 {
     int choice;
     int inputResult;
-    int character;
+    int ch;
 
     choice = 0;
-    printf("Enter your choice: ");
+    printf("\n  Enter your choice: ");
     inputResult = scanf("%d", &choice);
 
-    character = getchar();
-    while (character != '\n' && character != EOF)
+    /* Clear input buffer */
+    ch = getchar();
+    while (ch != '\n' && ch != EOF)
     {
-        character = getchar();
+        ch = getchar();
     }
 
     if (inputResult != 1)
@@ -111,54 +166,99 @@ int readMenuChoice(void)
     return choice;
 }
 
+/*
+ * waitForEnter - Pauses execution until the user presses Enter.
+ * Used after displaying results so the user can read the output.
+ */
 void waitForEnter(void)
 {
-    int character;
+    int ch;
 
-    printf("\nPress Enter to return to the main menu...");
-    character = getchar();
+    printf("  Press Enter to continue...");
+    ch = getchar();
 
-    while (character != '\n' && character != EOF)
+    while (ch != '\n' && ch != EOF)
     {
-        character = getchar();
+        ch = getchar();
     }
 }
 
-void loadMazePlaceholder(int *mazeLoaded)
+/* ===== Menu Handlers ===== */
+
+/*
+ * handleLoadMaze - Prompts for a maze filename and loads it.
+ * On success, displays the maze and sets *mazeLoaded = 1.
+ * On failure, sets *mazeLoaded = 0 and shows an error.
+ */
+void handleLoadMaze(Maze *maze, int *mazeLoaded)
 {
+    char filename[256];
+    int len;
+    int loadResult;
+
     clearScreen();
     displayHeader();
-    printf("LOAD MAZE\n");
-    printf("------------------------------------------\n\n");
-    printf("Maze file loading will be added here.\n");
-    printf("For now, a sample maze is marked as loaded.\n");
+    printf("  LOAD MAZE\n");
+    printf("  ------------------------------------------\n\n");
+    printf("  Enter maze filename: ");
 
-    *mazeLoaded = 1;
+    if (fgets(filename, sizeof(filename), stdin) != NULL)
+    {
+        /* Strip trailing newline from fgets */
+        len = (int)strlen(filename);
+        if (len > 0 && filename[len - 1] == '\n')
+        {
+            filename[len - 1] = '\0';
+            len = len - 1;
+        }
+        if (len > 0 && filename[len - 1] == '\r')
+        {
+            filename[len - 1] = '\0';
+        }
 
-    printf("\nStatus: Maze loaded successfully.\n");
+        printf("\n  Loading '%s'...\n", filename);
+        loadResult = loadMaze(maze, filename);
+
+        if (loadResult == 1)
+        {
+            *mazeLoaded = 1;
+            printf("\n  " ANSI_GREEN ANSI_BOLD "Maze loaded successfully!"
+                   ANSI_RESET "\n");
+            displayMaze(maze);
+        }
+        else
+        {
+            *mazeLoaded = 0;
+            printf("\n  " ANSI_RED "Failed to load maze." ANSI_RESET "\n\n");
+        }
+    }
+
     waitForEnter();
 }
 
-void startSimulationPlaceholder(int mazeLoaded)
+/*
+ * handleStartSimulation - Runs the DFS solver on the loaded maze.
+ * Shows an error if no maze has been loaded yet.
+ */
+void handleStartSimulation(Maze *maze, int mazeLoaded)
 {
+    SolverResult result;
+
     clearScreen();
     displayHeader();
-    printf("START SIMULATION\n");
-    printf("------------------------------------------\n\n");
+    printf("  START SIMULATION\n");
+    printf("  ------------------------------------------\n\n");
 
     if (mazeLoaded == 1)
     {
-        printf("The maze is ready.\n");
-        printf("The pathfinding animation will be added here.\n\n");
-        printf("Simulation metrics:\n");
-        printf("  Cells explored : --\n");
-        printf("  Final path     : --\n");
-        printf("  Execution time : -- ms\n");
+        printf("  Running DFS pathfinding solver...\n");
+        solveMaze(maze, &result);
+        displayMetrics(&result);
     }
     else
     {
-        printf("No maze has been loaded yet.\n");
-        printf("Please select [1] Load Maze first.\n");
+        printf("  " ANSI_RED "No maze loaded yet." ANSI_RESET "\n");
+        printf("  Please select [1] Load Maze first.\n\n");
     }
 
     waitForEnter();
