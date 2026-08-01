@@ -45,6 +45,7 @@ int loadMaze(Maze *maze, const char *filename)
     char line[MAX_COLS + 3]; /* +3 for \r, \n, and \0 */
     int ch;
     int len;
+    int validSymbol;
 
     valid = 1;
     foundStart = 0;
@@ -83,12 +84,12 @@ int loadMaze(Maze *maze, const char *filename)
     /* Validate dimensions against spec limits */
     if (valid == 1)
     {
-        if (maze->rows < 1 || maze->rows > MAX_ROWS ||
-            maze->cols < 1 || maze->cols > MAX_COLS)
+        if (maze->rows < 15 || maze->rows > MAX_ROWS ||
+            maze->cols < 15 || maze->cols > MAX_COLS)
         {
             printf("\n  " ANSI_RED "Error: Invalid dimensions %d x %d "
-                   "(max %d x %d)" ANSI_RESET "\n",
-                   maze->rows, maze->cols, MAX_ROWS, MAX_COLS);
+                   "(required: 15 to %d rows and columns)" ANSI_RESET "\n",
+                   maze->rows, maze->cols, MAX_ROWS);
             valid = 0;
         }
     }
@@ -126,31 +127,45 @@ int loadMaze(Maze *maze, const char *filename)
                     len = len - 1;
                 }
 
-                /* Copy each character into the grid */
-                col = 0;
-                while (col < maze->cols)
+                if (len != maze->cols)
                 {
-                    if (col < len)
+                    printf("\n  " ANSI_RED "Error: Row %d has %d characters; "
+                           "expected %d." ANSI_RESET "\n",
+                           row + 1, len, maze->cols);
+                    valid = 0;
+                }
+
+                /* Validate and copy each character into the grid. */
+                col = 0;
+                while (col < maze->cols && valid == 1)
+                {
+                    validSymbol = line[col] == '#' || line[col] == ' ' ||
+                                  line[col] == 'S' || line[col] == 'G';
+
+                    if (validSymbol == 0)
+                    {
+                        printf("\n  " ANSI_RED "Error: Invalid symbol '%c' at "
+                               "row %d, column %d." ANSI_RESET "\n",
+                               line[col], row + 1, col + 1);
+                        valid = 0;
+                    }
+
+                    if (valid == 1)
                     {
                         maze->grid[row][col] = line[col];
 
                         if (line[col] == 'S')
                         {
+                            foundStart = foundStart + 1;
                             maze->start.row = row;
                             maze->start.col = col;
-                            foundStart = 1;
                         }
                         else if (line[col] == 'G')
                         {
+                            foundGoal = foundGoal + 1;
                             maze->goal.row = row;
                             maze->goal.col = col;
-                            foundGoal = 1;
                         }
-                    }
-                    else
-                    {
-                        /* Pad short lines with spaces (open paths) */
-                        maze->grid[row][col] = ' ';
                     }
                     col = col + 1;
                 }
@@ -166,17 +181,17 @@ int loadMaze(Maze *maze, const char *filename)
     }
 
     /* Validate that start and goal positions exist */
-    if (valid == 1 && foundStart == 0)
+    if (valid == 1 && foundStart != 1)
     {
-        printf("\n  " ANSI_RED "Error: No start position 'S' found "
-               "in maze." ANSI_RESET "\n");
+        printf("\n  " ANSI_RED "Error: Maze must contain exactly one 'S'. "
+               "Found %d." ANSI_RESET "\n", foundStart);
         valid = 0;
     }
 
-    if (valid == 1 && foundGoal == 0)
+    if (valid == 1 && foundGoal != 1)
     {
-        printf("\n  " ANSI_RED "Error: No goal position 'G' found "
-               "in maze." ANSI_RESET "\n");
+        printf("\n  " ANSI_RED "Error: Maze must contain exactly one 'G'. "
+               "Found %d." ANSI_RESET "\n", foundGoal);
         valid = 0;
     }
 

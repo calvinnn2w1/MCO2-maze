@@ -2,7 +2,7 @@
  * solver.c
  *
  * Implementation of the maze solver.
- * Currently contains STUBS for the DFS algorithm (to be completed).
+ * Implements animated depth-first search using the linked-list Stack.
  *
  * Included headers (and why):
  *   <stdio.h>  - printf() for status messages and metrics display.
@@ -10,16 +10,95 @@
  *   "solver.h" - SolverResult type and function declarations.
  *   "maze.h"   - Maze type, ANSI colors, cell state constants.
  *
- * When completing the DFS implementation, you will also need:
- *   <time.h>      - clock() for measuring execution time in ms.
- *   <windows.h>   - Sleep() for animation delay between steps (Windows).
- *                   On Linux/Mac, use <unistd.h> with usleep() instead.
+ * The animation delay uses clock() so the program remains C99-compatible
+ * on Windows, Linux, and macOS without platform-specific headers.
  */
 
 #include "solver.h"
 #include "maze.h"
 #include <stdio.h>
-#include <string.h>
+#include <time.h>
+
+#ifndef ANIMATION_DELAY_MS
+#define ANIMATION_DELAY_MS 75
+#endif
+
+/* Waits for the requested duration using only standard C99 functions. */
+void pauseAnimation(int milliseconds) {
+  clock_t startTime;
+  clock_t requiredTicks;
+
+  startTime = clock();
+  requiredTicks = (clock_t)((double)milliseconds * CLOCKS_PER_SEC / 1000.0);
+
+  while (clock() - startTime < requiredTicks) {
+    /* Intentional empty loop for a portable animation delay. */
+  }
+}
+
+/* Displays one animation frame and restores the current cell afterward. */
+void showAnimationFrame(Maze *maze, SolverResult *result, Position current,
+                        const char *action) {
+  int previousState;
+
+  previousState = result->visited[current.row][current.col];
+  result->visited[current.row][current.col] = CELL_CURRENT;
+
+  printf("\033[2J\033[H");
+  printf(ANSI_CYAN ANSI_BOLD "  RAT IN A MAZE - DFS SIMULATION" ANSI_RESET
+                             "\n");
+  printf("  Action: %s\n", action);
+  printf("  Cells explored: %d\n", result->cellsExplored);
+  displayMazeState(maze, result->visited);
+  pauseAnimation(ANIMATION_DELAY_MS);
+
+  result->visited[current.row][current.col] = previousState;
+}
+
+/* Builds result->path in start-to-goal order using the parent arrays. */
+void reconstructPath(Maze *maze, SolverResult *result) {
+  Position current;
+  Position temp;
+  int count;
+  int index;
+  int reverseIndex;
+  int tracing;
+
+  current = maze->goal;
+  count = 0;
+  tracing = 1;
+
+  while (tracing == 1) {
+    result->path[count] = current;
+    count = count + 1;
+
+    if (current.row == maze->start.row && current.col == maze->start.col) {
+      tracing = 0;
+    } else {
+      temp.row = result->parentRow[current.row][current.col];
+      temp.col = result->parentCol[current.row][current.col];
+      current = temp;
+    }
+  }
+
+  index = 0;
+  reverseIndex = count - 1;
+  while (index < reverseIndex) {
+    temp = result->path[index];
+    result->path[index] = result->path[reverseIndex];
+    result->path[reverseIndex] = temp;
+    index = index + 1;
+    reverseIndex = reverseIndex - 1;
+  }
+
+  result->pathLength = count - 1;
+  index = 1;
+  while (index < count - 1) {
+    current = result->path[index];
+    result->visited[current.row][current.col] = CELL_PATH;
+    index = index + 1;
+  }
+}
 
 /*
  * initSolverResult - Resets all fields to default values.
@@ -90,18 +169,110 @@ void initSolverResult(SolverResult *result) {
  * Returns: 1 if path found, 0 if no path exists.
  */
 int solveMaze(Maze *maze, SolverResult *result) {
+  Stack stack;
+  Position current;
+  Position neighbor;
+  Position removed;
+  int rowChange[4];
+  int colChange[4];
+  int direction;
+  int neighborFound;
+  int searching;
+  clock_t algorithmTicks;
+  clock_t segmentStart;
+  clock_t segmentEnd;
+
   initSolverResult(result);
 
-  printf("\n  " ANSI_CYAN "========== DFS SOLVER ==========" ANSI_RESET "\n\n");
-  printf("  Maze: %d x %d\n", maze->rows, maze->cols);
-  printf("  Start: (%d, %d)\n", maze->start.row, maze->start.col);
-  printf("  Goal : (%d, %d)\n\n", maze->goal.row, maze->goal.col);
-  printf("  " ANSI_YELLOW
-         "Status: DFS algorithm not yet implemented." ANSI_RESET "\n");
-  printf("  The solver will be completed in the next phase.\n");
-  printf("  See the pseudocode in solver.c for the full plan.\n\n");
+  rowChange[0] = -1;
+  rowChange[1] = 0;
+  rowChange[2] = 1;
+  rowChange[3] = 0;
+  colChange[0] = 0;
+  colChange[1] = 1;
+  colChange[2] = 0;
+  colChange[3] = -1;
 
-  /* ===== TODO: DFS IMPLEMENTATION GOES HERE ===== */
+  initStack(&stack);
+  push(&stack, maze->start);
+  result->visited[maze->start.row][maze->start.col] = CELL_VISITED;
+  result->cellsExplored = 1;
+  searching = 1;
+  algorithmTicks = 0;
+
+  while (searching == 1) {
+    segmentStart = clock();
+
+    if (isStackEmpty(&stack) == 1) {
+      searching = 0;
+    } else {
+      current = peek(&stack);
+
+      if (current.row == maze->goal.row && current.col == maze->goal.col) {
+        result->solved = 1;
+        searching = 0;
+      }
+    }
+
+    segmentEnd = clock();
+    algorithmTicks = algorithmTicks + (segmentEnd - segmentStart);
+
+    if (searching == 1) {
+      showAnimationFrame(maze, result, current, "Exploring");
+
+      segmentStart = clock();
+      direction = 0;
+      neighborFound = 0;
+
+      while (direction < 4 && neighborFound == 0) {
+        neighbor.row = current.row + rowChange[direction];
+        neighbor.col = current.col + colChange[direction];
+
+        if (isWalkable(maze, neighbor.row, neighbor.col) == 1 &&
+            result->visited[neighbor.row][neighbor.col] == CELL_EMPTY) {
+          result->visited[neighbor.row][neighbor.col] = CELL_VISITED;
+          result->parentRow[neighbor.row][neighbor.col] = current.row;
+          result->parentCol[neighbor.row][neighbor.col] = current.col;
+          push(&stack, neighbor);
+          result->cellsExplored = result->cellsExplored + 1;
+          neighborFound = 1;
+        }
+
+        direction = direction + 1;
+      }
+
+      if (neighborFound == 0) {
+        removed = pop(&stack);
+      }
+
+      segmentEnd = clock();
+      algorithmTicks = algorithmTicks + (segmentEnd - segmentStart);
+
+      if (neighborFound == 0 && isStackEmpty(&stack) == 0) {
+        showAnimationFrame(maze, result, removed, "Dead end - backtracking");
+      }
+    }
+  }
+
+  if (result->solved == 1) {
+    segmentStart = clock();
+    reconstructPath(maze, result);
+    segmentEnd = clock();
+    algorithmTicks = algorithmTicks + (segmentEnd - segmentStart);
+
+    printf("\033[2J\033[H");
+    printf(ANSI_GREEN ANSI_BOLD "  GOAL FOUND - FINAL DFS PATH" ANSI_RESET
+                              "\n");
+    displayMazeState(maze, result->visited);
+  } else {
+    printf("\033[2J\033[H");
+    printf(ANSI_RED ANSI_BOLD "  NO SOLUTION EXISTS" ANSI_RESET "\n");
+    displayMazeState(maze, result->visited);
+  }
+
+  result->executionTimeMs =
+      (double)algorithmTicks * 1000.0 / CLOCKS_PER_SEC;
+  freeStack(&stack);
 
   return result->solved;
 }

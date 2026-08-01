@@ -54,11 +54,8 @@ void initSolverResult(SolverResult *result);
 /*
  * solveMaze - Runs DFS on the maze to find a path from S to G.
  *
- * TODO (remaining 50%): Implement the DFS algorithm with:
- *   1. Explicit stack for exploration.
- *   2. Parent tracking for path reconstruction.
- *   3. Animation (clearScreen + displayMazeState + Sleep per step).
- *   4. Metrics recording.
+ * Uses an explicit linked-list stack, parent tracking, animated exploration
+ * and backtracking, final-path reconstruction, and performance metrics.
  *
  * Returns: 1 if path found, 0 if no path exists.
  */
