@@ -1,18 +1,5 @@
 /*
- * maze.h
- *
- * Header file for maze data representation.
- * Defines the Maze struct, Position struct, display constants,
- * and function declarations for loading and displaying mazes.
- *
- * Included headers (and why):
- *   - None here; implementation files include what they need.
- *
- * Constants:
- *   - MAX_ROWS/MAX_COLS: Upper bound for maze dimensions (spec: 15-30).
- *     Set to 30 to match the spec maximum.
- *   - CELL_* constants: Track cell state during animation.
- *   - ANSI_* constants: Terminal color codes for colored TUI output.
+ * maze.h - Maze Data Representation & Declarations
  */
 
 #ifndef MAZE_H

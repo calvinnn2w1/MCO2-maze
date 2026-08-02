@@ -1,17 +1,6 @@
 /*
- * solver.c
- *
- * Implementation of the maze solver.
- * Implements animated depth-first search using the linked-list Stack.
- *
- * Included headers (and why):
- *   <stdio.h>  - printf() for status messages and metrics display.
- *   <string.h> - (Reserved for future use in path reconstruction.)
- *   "solver.h" - SolverResult type and function declarations.
- *   "maze.h"   - Maze type, ANSI colors, cell state constants.
- *
- * The animation delay uses clock() so the program remains C99-compatible
- * on Windows, Linux, and macOS without platform-specific headers.
+ * solver.c - Maze Solver & Animation
+ * Implements animated DFS using explicit linked-list stack.
  */
 
 #include "solver.h"

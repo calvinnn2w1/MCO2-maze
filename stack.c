@@ -1,20 +1,6 @@
 /*
- * stack.c
- *
- * Implementation of the self-implemented Stack (linked list).
- *
- * Included headers (and why):
- *   <stdio.h>  - printf() for error messages (e.g., malloc failure).
- *   <stdlib.h> - malloc() and free() for dynamic memory allocation
- *                of StackNode elements. Each push allocates a node,
- *                each pop frees one.
- *   "stack.h"  - Stack/StackNode/Position type definitions.
- *
- * Design notes:
- *   - Linked list chosen over array to avoid fixed capacity limits.
- *   - No global variables; all state is in the Stack struct.
- *   - No break/continue in loops; loops use condition flags.
- *   - Single return at end of each non-void function.
+ * stack.c - Linked List Stack Data Structure
+ * Self-implemented dynamic stack for DFS traversal.
  */
 
 #include <stdio.h>

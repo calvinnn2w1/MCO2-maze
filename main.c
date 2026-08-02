@@ -1,22 +1,6 @@
 /*
- * main.c
- *
- * Entry point for the Rat in a Maze Simulator.
- * Provides a menu-driven TUI for loading mazes and running the
- * DFS pathfinding simulation.
- *
- * Included headers (and why):
- *   <stdio.h>  - printf/scanf/getchar/fgets for user I/O.
- *   <string.h> - strlen() for stripping newlines from filename input.
- *   "maze.h"   - Maze type and display functions.
- *   "stack.h"  - Stack type (included transitively, but explicit for clarity).
- *   "solver.h" - SolverResult type, solveMaze(), displayMetrics().
- *
- * Coding restrictions enforced:
- *   - No global variables (all state is local to main or passed as params).
- *   - break only inside switch statements.
- *   - return only in non-void functions, only at the natural end.
- *   - No continue, exit(), goto, or calling main().
+ * main.c - Rat in a Maze Simulator
+ * Menu-driven terminal UI for loading mazes and running DFS simulation.
  */
 
 #include <stdio.h>

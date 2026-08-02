@@ -1,16 +1,5 @@
 /*
- * stack.h
- *
- * Header file for the self-implemented Stack data structure.
- * This Stack stores Position elements (maze cell coordinates) and
- * is used by the DFS algorithm for backtracking and exploration.
- *
- * Implementation: Linked list (dynamic, no fixed capacity limit).
- *
- * Included headers (and why):
- *   "maze.h" - Provides the Position type that the Stack stores.
- *              The Stack is purpose-built for maze traversal, so
- *              coupling it to Position is intentional and clean.
+ * stack.h - Linked List Stack Declarations
  */
 
 #ifndef STACK_H

@@ -1,13 +1,5 @@
 /*
- * solver.h
- *
- * Header file for the maze solver (DFS pathfinding).
- * Defines the SolverResult struct for tracking metrics and state,
- * and declares the solver functions.
- *
- * Included headers (and why):
- *   "maze.h"  - Maze and Position types (solver operates on a Maze).
- *   "stack.h" - Stack type (DFS uses an explicit stack for backtracking).
+ * solver.h - Solver Structs & Declarations
  */
 
 #ifndef SOLVER_H

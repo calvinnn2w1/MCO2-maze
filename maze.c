@@ -1,14 +1,6 @@
 /*
- * maze.c
- *
- * Implementation of maze loading, display, and utility functions.
- *
- * Included headers (and why):
- *   <stdio.h>  - File I/O (fopen, fscanf, fgets, fgetc, fclose, printf)
- *                for reading maze files and printing the maze to the terminal.
- *   <string.h> - strlen() for processing each line read from the maze file
- *                (needed to strip trailing newline/carriage return characters).
- *   "maze.h"   - Maze/Position type definitions and function declarations.
+ * maze.c - Maze Data & Rendering
+ * Handles loading maze files, grid rendering, and file directory scanning.
  */
 
 #include <stdio.h>
