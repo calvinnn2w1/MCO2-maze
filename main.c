@@ -200,6 +200,7 @@ void handleLoadMaze(Maze *maze, int *mazeLoaded)
     int len;
     int loadResult;
     int validSelection;
+    int userCancelled;
     int ch;
 
     clearScreen();
@@ -209,6 +210,7 @@ void handleLoadMaze(Maze *maze, int *mazeLoaded)
 
     fileCount = scanMazeFiles(fileList, 30);
     validSelection = 0;
+    userCancelled = 0;
     filename[0] = '\0';
 
     if (fileCount > 0)
@@ -220,8 +222,9 @@ void handleLoadMaze(Maze *maze, int *mazeLoaded)
             printf("    [%d] %s\n", index + 1, fileList[index]);
             index = index + 1;
         }
-        printf("    [0] Enter custom filename manually\n\n");
-        printf("  Select maze [0-%d]: ", fileCount);
+        printf("    [%d] Enter custom filename manually\n", fileCount + 1);
+        printf("    [0] Back to Main Menu\n\n");
+        printf("  Select an option [0-%d]: ", fileCount + 1);
 
         if (scanf("%d", &choice) == 1)
         {
@@ -231,7 +234,11 @@ void handleLoadMaze(Maze *maze, int *mazeLoaded)
                 ch = getchar();
             }
 
-            if (choice > 0 && choice <= fileCount)
+            if (choice == 0)
+            {
+                userCancelled = 1;
+            }
+            else if (choice > 0 && choice <= fileCount)
             {
                 strncpy(filename, fileList[choice - 1], sizeof(filename));
                 validSelection = 1;
@@ -247,7 +254,7 @@ void handleLoadMaze(Maze *maze, int *mazeLoaded)
         }
     }
 
-    if (validSelection == 0)
+    if (userCancelled == 0 && validSelection == 0)
     {
         printf("\n  Enter maze filename: ");
         if (fgets(filename, sizeof(filename), stdin) != NULL)
@@ -269,7 +276,7 @@ void handleLoadMaze(Maze *maze, int *mazeLoaded)
         }
     }
 
-    if (validSelection == 1 && filename[0] != '\0')
+    if (userCancelled == 0 && validSelection == 1 && filename[0] != '\0')
     {
         printf("\n  Loading '%s'...\n", filename);
         loadResult = loadMaze(maze, filename);
@@ -280,15 +287,15 @@ void handleLoadMaze(Maze *maze, int *mazeLoaded)
             printf("\n  " ANSI_GREEN ANSI_BOLD "Maze loaded successfully!"
                    ANSI_RESET "\n");
             displayMaze(maze);
+            waitForEnter();
         }
         else
         {
             *mazeLoaded = 0;
             printf("\n  " ANSI_RED "Failed to load maze." ANSI_RESET "\n\n");
+            waitForEnter();
         }
     }
-
-    waitForEnter();
 }
 
 /*
