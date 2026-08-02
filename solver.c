@@ -19,11 +19,15 @@
 #include <stdio.h>
 #include <time.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #ifndef ANIMATION_DELAY_MS
 #define ANIMATION_DELAY_MS 75
 #endif
 
-/* Waits for the requested duration using only standard C99 functions. */
+/* Waits for the requested duration using standard C functions. */
 void pauseAnimation(int milliseconds) {
   clock_t startTime;
   clock_t requiredTicks;
@@ -34,6 +38,39 @@ void pauseAnimation(int milliseconds) {
   while (clock() - startTime < requiredTicks) {
     /* Intentional empty loop for a portable animation delay. */
   }
+}
+
+/* Helper structure for high-resolution timing */
+typedef struct {
+#ifdef _WIN32
+  LARGE_INTEGER ticks;
+#else
+  struct timespec ts;
+#endif
+} HighResTime;
+
+/* Gets the current high-resolution timestamp */
+static HighResTime getHighResTime(void) {
+  HighResTime t;
+#ifdef _WIN32
+  QueryPerformanceCounter(&t.ticks);
+#else
+  clock_gettime(CLOCK_MONOTONIC, &t.ts);
+#endif
+  return t;
+}
+
+/* Calculates elapsed nanoseconds between start and end timestamps */
+static double getElapsedNanoseconds(HighResTime start, HighResTime end) {
+#ifdef _WIN32
+  LARGE_INTEGER freq;
+  QueryPerformanceFrequency(&freq);
+  return (double)(end.ticks.QuadPart - start.ticks.QuadPart) * 1000000000.0 / (double)freq.QuadPart;
+#else
+  double startNs = (double)start.ts.tv_sec * 1000000000.0 + (double)start.ts.tv_nsec;
+  double endNs = (double)end.ts.tv_sec * 1000000000.0 + (double)end.ts.tv_nsec;
+  return endNs - startNs;
+#endif
 }
 
 /* Displays one animation frame and restores the current cell afterward. */
@@ -112,6 +149,7 @@ void initSolverResult(SolverResult *result) {
   result->cellsExplored = 0;
   result->pathLength = 0;
   result->executionTimeMs = 0.0;
+  result->executionTimeNs = 0.0;
 
   row = 0;
   while (row < MAX_ROWS) {
@@ -178,9 +216,9 @@ int solveMaze(Maze *maze, SolverResult *result) {
   int direction;
   int neighborFound;
   int searching;
-  clock_t algorithmTicks;
-  clock_t segmentStart;
-  clock_t segmentEnd;
+  HighResTime segmentStart;
+  HighResTime segmentEnd;
+  double totalNanoseconds;
 
   initSolverResult(result);
 
@@ -198,10 +236,10 @@ int solveMaze(Maze *maze, SolverResult *result) {
   result->visited[maze->start.row][maze->start.col] = CELL_VISITED;
   result->cellsExplored = 1;
   searching = 1;
-  algorithmTicks = 0;
+  totalNanoseconds = 0.0;
 
   while (searching == 1) {
-    segmentStart = clock();
+    segmentStart = getHighResTime();
 
     if (isStackEmpty(&stack) == 1) {
       searching = 0;
@@ -214,13 +252,13 @@ int solveMaze(Maze *maze, SolverResult *result) {
       }
     }
 
-    segmentEnd = clock();
-    algorithmTicks = algorithmTicks + (segmentEnd - segmentStart);
+    segmentEnd = getHighResTime();
+    totalNanoseconds = totalNanoseconds + getElapsedNanoseconds(segmentStart, segmentEnd);
 
     if (searching == 1) {
       showAnimationFrame(maze, result, current, "Exploring");
 
-      segmentStart = clock();
+      segmentStart = getHighResTime();
       direction = 0;
       neighborFound = 0;
 
@@ -245,8 +283,8 @@ int solveMaze(Maze *maze, SolverResult *result) {
         removed = pop(&stack);
       }
 
-      segmentEnd = clock();
-      algorithmTicks = algorithmTicks + (segmentEnd - segmentStart);
+      segmentEnd = getHighResTime();
+      totalNanoseconds = totalNanoseconds + getElapsedNanoseconds(segmentStart, segmentEnd);
 
       if (neighborFound == 0 && isStackEmpty(&stack) == 0) {
         showAnimationFrame(maze, result, removed, "Dead end - backtracking");
@@ -255,10 +293,10 @@ int solveMaze(Maze *maze, SolverResult *result) {
   }
 
   if (result->solved == 1) {
-    segmentStart = clock();
+    segmentStart = getHighResTime();
     reconstructPath(maze, result);
-    segmentEnd = clock();
-    algorithmTicks = algorithmTicks + (segmentEnd - segmentStart);
+    segmentEnd = getHighResTime();
+    totalNanoseconds = totalNanoseconds + getElapsedNanoseconds(segmentStart, segmentEnd);
 
     printf("\033[2J\033[H");
     printf(ANSI_GREEN ANSI_BOLD "  GOAL FOUND - FINAL DFS PATH" ANSI_RESET
@@ -270,8 +308,8 @@ int solveMaze(Maze *maze, SolverResult *result) {
     displayMazeState(maze, result->visited);
   }
 
-  result->executionTimeMs =
-      (double)algorithmTicks * 1000.0 / CLOCKS_PER_SEC;
+  result->executionTimeNs = totalNanoseconds;
+  result->executionTimeMs = totalNanoseconds / 1000000.0;
   freeStack(&stack);
 
   return result->solved;
@@ -296,7 +334,15 @@ void displayMetrics(SolverResult *result) {
 
   printf("  Cells explored : %d\n", result->cellsExplored);
   printf("  Path length    : %d\n", result->pathLength);
-  printf("  Execution time : %.2f ms\n\n", result->executionTimeMs);
+  
+  if (result->executionTimeMs < 0.01) {
+    printf("  Execution time : %.4f ms (%.0f ns / %.2f us)\n\n", 
+           result->executionTimeMs, result->executionTimeNs, result->executionTimeNs / 1000.0);
+  } else {
+    printf("  Execution time : %.2f ms (%.0f ns)\n\n", 
+           result->executionTimeMs, result->executionTimeNs);
+  }
+  
   printf("  " ANSI_CYAN "========================================" ANSI_RESET
          "\n\n");
 }

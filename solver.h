@@ -40,6 +40,7 @@ typedef struct
     int cellsExplored;
     int pathLength;
     double executionTimeMs;
+    double executionTimeNs;
     Position path[MAX_ROWS * MAX_COLS];
     int visited[MAX_ROWS][MAX_COLS];
     int parentRow[MAX_ROWS][MAX_COLS];
