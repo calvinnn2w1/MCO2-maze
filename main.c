@@ -192,30 +192,85 @@ void waitForEnter(void)
  */
 void handleLoadMaze(Maze *maze, int *mazeLoaded)
 {
+    char fileList[30][256];
     char filename[256];
+    int fileCount;
+    int index;
+    int choice;
     int len;
     int loadResult;
+    int validSelection;
+    int ch;
 
     clearScreen();
     displayHeader();
     printf("  LOAD MAZE\n");
     printf("  ------------------------------------------\n\n");
-    printf("  Enter maze filename: ");
 
-    if (fgets(filename, sizeof(filename), stdin) != NULL)
+    fileCount = scanMazeFiles(fileList, 30);
+    validSelection = 0;
+    filename[0] = '\0';
+
+    if (fileCount > 0)
     {
-        /* Strip trailing newline from fgets */
-        len = (int)strlen(filename);
-        if (len > 0 && filename[len - 1] == '\n')
+        printf("  AVAILABLE MAZE FILES:\n\n");
+        index = 0;
+        while (index < fileCount)
         {
-            filename[len - 1] = '\0';
-            len = len - 1;
+            printf("    [%d] %s\n", index + 1, fileList[index]);
+            index = index + 1;
         }
-        if (len > 0 && filename[len - 1] == '\r')
-        {
-            filename[len - 1] = '\0';
-        }
+        printf("    [0] Enter custom filename manually\n\n");
+        printf("  Select maze [0-%d]: ", fileCount);
 
+        if (scanf("%d", &choice) == 1)
+        {
+            ch = getchar();
+            while (ch != '\n' && ch != EOF)
+            {
+                ch = getchar();
+            }
+
+            if (choice > 0 && choice <= fileCount)
+            {
+                strncpy(filename, fileList[choice - 1], sizeof(filename));
+                validSelection = 1;
+            }
+        }
+        else
+        {
+            ch = getchar();
+            while (ch != '\n' && ch != EOF)
+            {
+                ch = getchar();
+            }
+        }
+    }
+
+    if (validSelection == 0)
+    {
+        printf("\n  Enter maze filename: ");
+        if (fgets(filename, sizeof(filename), stdin) != NULL)
+        {
+            len = (int)strlen(filename);
+            if (len > 0 && filename[len - 1] == '\n')
+            {
+                filename[len - 1] = '\0';
+                len = len - 1;
+            }
+            if (len > 0 && filename[len - 1] == '\r')
+            {
+                filename[len - 1] = '\0';
+            }
+            if (len > 0)
+            {
+                validSelection = 1;
+            }
+        }
+    }
+
+    if (validSelection == 1 && filename[0] != '\0')
+    {
         printf("\n  Loading '%s'...\n", filename);
         loadResult = loadMaze(maze, filename);
 

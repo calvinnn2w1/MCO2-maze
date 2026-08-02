@@ -105,4 +105,11 @@ int isValidCell(Maze *maze, int row, int col);
  */
 int isWalkable(Maze *maze, int row, int col);
 
+/*
+ * scanMazeFiles - Scans the mazes/ directory and root for .txt files.
+ * Populates fileList with found relative paths.
+ * Returns the total number of files found (up to maxFiles).
+ */
+int scanMazeFiles(char fileList[][256], int maxFiles);
+
 #endif

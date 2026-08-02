@@ -15,6 +15,10 @@
 #include <string.h>
 #include "maze.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 /*
  * loadMaze - Reads a maze from a text file.
  *
@@ -363,4 +367,65 @@ int isWalkable(Maze *maze, int row, int col)
     }
 
     return walkable;
+}
+
+/*
+ * scanMazeFiles - Scans the mazes/ directory and root for .txt files.
+ * Populates fileList with found relative paths.
+ * Returns the total number of files found (up to maxFiles).
+ */
+int scanMazeFiles(char fileList[][256], int maxFiles)
+{
+    int count;
+    count = 0;
+
+#ifdef _WIN32
+    WIN32_FIND_DATAA findData;
+    HANDLE hFind;
+    char pathBuffer[256];
+    int keepSearching;
+
+    /* Search mazes directory for .txt files */
+    hFind = FindFirstFileA("mazes/*.txt", &findData);
+    if (hFind != INVALID_HANDLE_VALUE)
+    {
+        keepSearching = 1;
+        while (count < maxFiles && keepSearching == 1)
+        {
+            snprintf(pathBuffer, sizeof(pathBuffer), "mazes/%s", findData.cFileName);
+            strncpy(fileList[count], pathBuffer, 256);
+            count = count + 1;
+
+            if (FindNextFileA(hFind, &findData) == FALSE)
+            {
+                keepSearching = 0;
+            }
+        }
+        FindClose(hFind);
+    }
+
+    /* Search current directory for .txt files */
+    hFind = FindFirstFileA("*.txt", &findData);
+    if (hFind != INVALID_HANDLE_VALUE)
+    {
+        keepSearching = 1;
+        while (count < maxFiles && keepSearching == 1)
+        {
+            /* Skip specs.txt if present */
+            if (strstr(findData.cFileName, "specs.txt") == NULL)
+            {
+                strncpy(fileList[count], findData.cFileName, 256);
+                count = count + 1;
+            }
+
+            if (FindNextFileA(hFind, &findData) == FALSE)
+            {
+                keepSearching = 0;
+            }
+        }
+        FindClose(hFind);
+    }
+#endif
+
+    return count;
 }
